@@ -20,9 +20,7 @@ def compute_scheduled_times(
     local_time: ZonedDateTime = PlainDateTime.from_py_datetime(
         scheduled_time
     ).assume_tz(timezone)
-    print(f"{local_time=}")
 
     utc_time: ZonedDateTime = local_time.to_tz("UTC")
-    print(f"{utc_time=}")
 
     return {"local": local_time, "utc": utc_time}
