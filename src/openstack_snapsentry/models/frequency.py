@@ -112,7 +112,7 @@ class WeeklySnapshotSchedule(BaseModel):
         alias=f"x-{application_settings.organization}-weekly-retention-type",
     )
     retention_days: int = Field(
-        default=7,
+        default=30,
         description="Indicates how long the snapshot has to be stored.",
         alias=f"x-{application_settings.organization}-weekly-retention-days",
     )
@@ -184,7 +184,7 @@ class MonthlySnapshotSchedule(BaseModel):
         alias=f"x-{application_settings.organization}-monthly-retention-type",
     )
     retention_days: int = Field(
-        default=7,
+        default=90,
         description="Indicates how long the snapshot has to be stored.",
         alias=f"x-{application_settings.organization}-monthly-retention-days",
     )
