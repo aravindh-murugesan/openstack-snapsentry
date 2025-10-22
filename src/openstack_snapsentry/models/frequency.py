@@ -189,7 +189,7 @@ class MonthlySnapshotSchedule(BaseModel):
         alias=f"x-{application_settings.organization}-monthly-retention-days",
     )
 
-    def is_snapshot_due(self, now: Optional[Instant] = None):
+    def is_snapshot_due(self, now: Optional[Instant] = None) -> SnapshotSchedule:
         if now is None:
             now = Instant.now()
 
