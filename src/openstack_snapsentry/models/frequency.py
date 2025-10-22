@@ -1,11 +1,10 @@
 import calendar
-from datetime import time
+from datetime import time, date, datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
-from whenever import Instant, ZonedDateTime
+from whenever import Instant, ZonedDateTime, PlainDateTime
 
-from src.openstack_snapsentry.helpers.snapshot import compute_scheduled_times
 from src.openstack_snapsentry.models.settings import application_settings
 
 
@@ -25,96 +24,150 @@ class SnapshotSchedule(BaseModel):
         description="Records the expected snapshot due date/time in user's preferred timezone for easier reference",
     )
     current_time_utc: Instant = Field(default=Instant.now())
-    reason: Optional[str] = Field(default="")
+    reason: Optional[str] = Field(default=None)
 
 
-class DailySnapshotSchedule(BaseModel):
+class BaseSnapshotSchedule(BaseModel):
+    model_config = {
+        "populate_by_name": True,
+    }
+
+    is_enabled: bool = Field(
+        default=False,
+        description="Indicates if daily snapshot workflow is expected for the volume",
+    )
+
+    start_time: time = Field(
+        default=time.fromisoformat("23:29"),
+        description="Time for the snapshot to trigger.",
+    )
+    timezone: str = Field(
+        default="UTC",
+        description="Indicates the timezone for the snapshot schedule",
+    )
+
+    def compute_scheduled_times(
+        self, now: Optional[Instant] = None
+    ) -> tuple[ZonedDateTime, ZonedDateTime]:
+        """
+        Computes the scheduled snapshot times in both UTC and the user's preferred timezone.
+
+        Args:
+            now (Optional[Instant]): The current time as an Instant object. If None, uses the current time.
+
+        Returns:
+            tuple[ZonedDateTime, ZonedDateTime]: A tuple containing the scheduled time in UTC and in the user's timezone.
+        """
+        if now is None:
+            now = Instant.now()
+
+        today: date = now.py_datetime().date()
+
+        scheduled_timeframe: date = datetime.combine(today, self.start_time)
+
+        local_time: ZonedDateTime = PlainDateTime.from_py_datetime(
+            scheduled_timeframe
+        ).assume_tz(self.timezone)
+
+        utc_time: ZonedDateTime = local_time.to_tz("UTC")
+
+        return (utc_time, local_time)
+
+    def timeframe_validation(self, now: Optional[Instant] = None) -> SnapshotSchedule:
+        if now is None:
+            now = Instant.now()
+
+        scheduled_timeframe_utc, scheduled_timeframe_zoned = (
+            self.compute_scheduled_times(now=now)
+        )
+        is_due = now >= scheduled_timeframe_utc
+        return SnapshotSchedule(
+            is_due=is_due,
+            next_time_zoned=scheduled_timeframe_zoned,
+            next_time_utc=scheduled_timeframe_utc,
+        )
+
+    def is_snapshot_due(self) -> SnapshotSchedule:
+        raise NotImplementedError("Must be implemented in subclass")
+
+
+class DailySnapshotSchedule(BaseSnapshotSchedule):
     model_config = {
         "populate_by_name": True,
     }
     is_enabled: bool = Field(
         default=False,
         description="Indicates if daily snapshot workflow is expected for the volume",
-        alias=f"x-{application_settings.organization}-daily-enabled",
+        alias=application_settings.get_alias(key="daily-enabled"),
     )
     start_time: time = Field(
         default=time.fromisoformat("23:29"),
         description="Time for the snapshot to trigger.",
-        alias=f"x-{application_settings.organization}-daily-start-time",
+        alias=application_settings.get_alias(key="daily-start-time"),
     )
     timezone: str = Field(
         default="UTC",
         description="Indicates the timezone for the snapshot schedule",
-        alias=f"x-{application_settings.organization}-daily-timezone",
+        alias=application_settings.get_alias(key="daily-timezone"),
     )
     retention_type: Literal["time"] = Field(
         default="time",
         description="Indicates how the expiry has to be handled",
-        alias=f"x-{application_settings.organization}-daily-retention-type",
+        alias=application_settings.get_alias(key="daily-retention-type"),
     )
     retention_days: int = Field(
         default=7,
         description="Indicates how long the snapshot has to be stored.",
-        alias=f"x-{application_settings.organization}-daily-retention-days",
+        alias=application_settings.get_alias(key="daily-retention-days"),
     )
 
-    def is_snapshot_due(self, now: Optional[Instant] = None) -> SnapshotSchedule:
-        if now is None:
-            now = Instant.now()
-
-        scheduled_time = compute_scheduled_times(
-            start_time=self.start_time, timezone=self.timezone
+    def is_snapshot_due(self) -> SnapshotSchedule:
+        is_time = self.timeframe_validation()
+        is_time.reason = (
+            f"Snapshot window matched: current time '{is_time.current_time_utc}' overlaps with scheduled window '{is_time.next_time_utc}'. "
+            "Proceeding with snapshot operation."
+            if is_time.is_due
+            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' is outside scheduled window '{is_time.next_time_utc}'. "
+            "Skipping snapshot operation."
         )
-        is_due = now >= scheduled_time.get("utc")  # type: ignore
-        return SnapshotSchedule(
-            is_due=is_due,
-            next_time_zoned=scheduled_time.get("local"),
-            next_time_utc=scheduled_time.get("utc"),
-            reason=(
-                f"Snapshot window matched: current time '{now}' overlaps with scheduled window '{scheduled_time.get('utc')}'. "
-                "Proceeding with snapshot operation."
-                if is_due
-                else f"Snapshot window mismatch: current time '{now}' is outside scheduled window '{scheduled_time.get('utc')}'. "
-                "Skipping snapshot operation."
-            ),
-        )
+        return is_time
 
 
-class WeeklySnapshotSchedule(BaseModel):
+class WeeklySnapshotSchedule(BaseSnapshotSchedule):
     model_config = {
         "populate_by_name": True,
     }
     is_enabled: bool = Field(
         default=False,
         description="Indicates if weekly snapshot workflow is expected for the volume",
-        alias=f"x-{application_settings.organization}-weekly-enabled",
+        alias=application_settings.get_alias(key="weekly-enabled"),
     )
     start_time: time = Field(
         default=time.fromisoformat("23:29"),
         description="Time for the snapshot to trigger.",
-        alias=f"x-{application_settings.organization}-weekly-start-time",
+        alias=application_settings.get_alias(key="weekly-start-time"),
     )
     start_day: Literal[
         "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
     ] = Field(
         default="sunday",
-        alias=f"x-{application_settings.organization}-weekly-start-day",
+        alias=application_settings.get_alias(key="weekly-start-day"),
         description="Indicates the starting day of the week for weekly snapshots.",
     )
     timezone: str = Field(
         default="UTC",
         description="Indicates the timezone for the snapshot schedule",
-        alias=f"x-{application_settings.organization}-weekly-timezone",
+        alias=application_settings.get_alias(key="weekly-timezone"),
     )
     retention_type: Literal["time"] = Field(
         default="time",
         description="Indicates how the expiry has to be handled",
-        alias=f"x-{application_settings.organization}-weekly-retention-type",
+        alias=application_settings.get_alias(key="weekly-retention-type"),
     )
     retention_days: int = Field(
         default=30,
         description="Indicates how long the snapshot has to be stored.",
-        alias=f"x-{application_settings.organization}-weekly-retention-days",
+        alias=application_settings.get_alias(key="weekly-retention-days"),
     )
 
     def is_snapshot_due(self, now: Optional[Instant] = None) -> SnapshotSchedule:
@@ -133,60 +186,52 @@ class WeeklySnapshotSchedule(BaseModel):
             )
 
         ## Check 2: Time window matches the snapshot's desired start time.
-        scheduled_time = compute_scheduled_times(
-            start_time=self.start_time, timezone=self.timezone
+        is_time = self.timeframe_validation()
+        is_time.reason = (
+            f"Snapshot window matched: current time '{is_time.current_time_utc}' and current day '{current_weekday}' overlaps with scheduled window '{is_time.next_time_utc}' every '{self.start_day}'. "
+            "Proceeding with snapshot operation."
+            if is_time.is_due
+            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' and current day '{current_weekday}' is outside scheduled window '{is_time.next_time_utc}' every '{self.start_day}'. "
+            "Skipping snapshot operation."
         )
-
-        is_due = now >= scheduled_time.get("utc")  # type: ignore
-        return SnapshotSchedule(
-            is_due=is_due,
-            next_time_zoned=scheduled_time.get("local"),
-            next_time_utc=scheduled_time.get("utc"),
-            reason=(
-                f"Snapshot window matched: current time '{now}' and current day '{current_weekday}' overlaps with scheduled window '{scheduled_time.get('utc')}' every '{self.start_day}'. "
-                "Proceeding with snapshot operation."
-                if is_due
-                else f"Snapshot window mismatch: current time '{now}' and current day '{current_weekday}' is outside scheduled window '{scheduled_time.get('utc')}' every '{self.start_day}'. "
-                "Skipping snapshot operation."
-            ),
-        )
+        return is_time
 
 
-class MonthlySnapshotSchedule(BaseModel):
+class MonthlySnapshotSchedule(BaseSnapshotSchedule):
     model_config = {
         "populate_by_name": True,
     }
     is_enabled: bool = Field(
         default=False,
         description="Indicates if monthly snapshot workflow is expected for the volume",
-        alias=f"x-{application_settings.organization}-monthly-enabled",
+        alias=application_settings.get_alias(key="monthly-enabled"),
     )
     start_time: time = Field(
         default=time.fromisoformat("23:29"),
         description="Time for the snapshot to trigger.",
-        alias=f"x-{application_settings.organization}-monthly-start-time",
+        alias=application_settings.get_alias(key="monthly-start-time"),
     )
     start_date: int = Field(
         default=1,
         ge=1,
         le=31,
-        alias=f"x-{application_settings.organization}-monthly-start-date",
+        alias=application_settings.get_alias(key="monthly-start-date"),
         description="Indicates the starting day of the week for monthly snapshots.",
     )
     timezone: str = Field(
         default="UTC",
         description="Indicates the timezone for the snapshot schedule",
-        alias=f"x-{application_settings.organization}-monthly-timezone",
+        alias=application_settings.get_alias(key="monthly-timezone"),
     )
     retention_type: Literal["time"] = Field(
         default="time",
         description="Indicates how the expiry has to be handled",
-        alias=f"x-{application_settings.organization}-monthly-retention-type",
+        alias=application_settings.get_alias(key="monthly-retention-type"),
     )
     retention_days: int = Field(
         default=90,
         description="Indicates how long the snapshot has to be stored.",
-        alias=f"x-{application_settings.organization}-monthly-retention-days",
+        alias=application_settings.get_alias(key="monthly-retention-days"),
     )
 
     def is_snapshot_due(self, now: Optional[Instant] = None) -> SnapshotSchedule:
@@ -194,15 +239,20 @@ class MonthlySnapshotSchedule(BaseModel):
             now = Instant.now()
 
         today = now.py_datetime().date()
-        scheduled_time = compute_scheduled_times(
-            start_time=self.start_time, timezone=self.timezone
-        )
+
+        ## Check 1: We are doing this validation earlier, since this already computes the
+        # scheduled timeframe window that we can use for date checks
+        is_time = self.timeframe_validation()
 
         try:
-            expected_date = scheduled_time.get("utc").replace(day=self.start_date)
+            ## User can provide any day of the month. So we try to replace the date from our
+            # time based calculations.
+            expected_date = is_time.next_time_utc.replace(day=self.start_date)
         except ValueError:
+            ## If the date is invalid, say 31 on months that only has 30, this replaces it
+            # with the last valid day of the month.
             last_date = calendar.monthrange(today.year, today.month)[1]
-            expected_date = scheduled_time.get("utc").replace(day=last_date)
+            expected_date = is_time.next_time_utc.replace(day=last_date)
 
         ## Check 1: Check current date matches expected date
         is_due = today.day == expected_date.day
@@ -213,16 +263,11 @@ class MonthlySnapshotSchedule(BaseModel):
             )
 
         ## Check 2: Time window matches the snapshot's desired start time.
-        is_due = now >= scheduled_time.get("utc")  # type: ignore
-        return SnapshotSchedule(
-            is_due=is_due,
-            next_time_zoned=scheduled_time.get("local"),
-            next_time_utc=scheduled_time.get("utc"),
-            reason=(
-                f"Snapshot window matched: current time '{now}' and current date '{today.day}' overlaps with scheduled window '{scheduled_time.get('utc')}' every '{expected_date.day}'. "
-                "Proceeding with snapshot operation."
-                if is_due
-                else f"Snapshot window mismatch: current time '{now}' and current date '{today.day}' is outside scheduled window '{scheduled_time.get('utc')}' every '{expected_date.day}'. "
-                "Skipping snapshot operation."
-            ),
+        is_time.reason = (
+            f"Snapshot window matched: current time '{is_time.current_time_utc}' and current date '{today.day}' overlaps with scheduled window '{is_time.next_time_utc}' every '{self.start_date}'. "
+            "Proceeding with snapshot operation."
+            if is_time.is_due
+            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' and current date '{today.day}' is outside scheduled window '{is_time.next_time_utc}' every '{self.start_date}'. "
+            "Skipping snapshot operation."
         )
+        return is_time
