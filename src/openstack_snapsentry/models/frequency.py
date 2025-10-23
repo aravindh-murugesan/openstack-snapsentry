@@ -2,8 +2,8 @@ import calendar
 from datetime import time, date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
-from whenever import Instant, ZonedDateTime, PlainDateTime
+from pydantic import BaseModel, Field, field_validator
+from whenever import Instant, ZonedDateTime, PlainDateTime, available_timezones
 
 from src.openstack_snapsentry.models.settings import application_settings
 
@@ -45,6 +45,15 @@ class BaseSnapshotSchedule(BaseModel):
         default="UTC",
         description="Indicates the timezone for the snapshot schedule",
     )
+
+    @field_validator("timezone")
+    def validate_timezone(cls, v: str) -> str:
+        """Ensure timezone is valid."""
+        if v not in available_timezones():
+            raise ValueError(
+                f"Invalid timezone '{v}'. Must be one of available IANA zones."
+            )
+        return v
 
     def compute_scheduled_times(
         self, now: Optional[Instant] = None
