@@ -81,3 +81,14 @@ class VolumeSubscriptionInfo(BaseModel):
         return self.dump_flat_str_dict()
 
 
+class OpenstackVolume(BaseModel):
+    model_config = {
+        "populate_by_name": True,
+    }
+
+    id: str = Field(description="Unique id of the volume in openstack")
+    name: Optional[str] = Field(default=None, description="Name of the volume")
+    status: str = Field(description="Status of the openstack volume")
+    snapshot_subscription: VolumeSubscriptionInfo = Field(
+        description="Automated snapshot subscription information"
+    )
