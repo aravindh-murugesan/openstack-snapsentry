@@ -11,6 +11,9 @@ from src.openstack_snapsentry.models.settings import application_settings
 
 
 class VolumeSubscriptionInfo(BaseModel):
+    model_config = {
+        "populate_by_name": True,
+    }
     is_enabled: bool = Field(
         default=False,
         description="Indicates if this volume has to be managed by SnapSentry",
