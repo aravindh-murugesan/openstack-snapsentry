@@ -63,7 +63,7 @@ class BaseSnapshotSchedule(BaseModel):
 
         today: date = now.py_datetime().date()
 
-        scheduled_timeframe: date = datetime.combine(today, self.start_time)
+        scheduled_timeframe: datetime = datetime.combine(today, self.start_time)
 
         local_time: ZonedDateTime = PlainDateTime.from_py_datetime(
             scheduled_timeframe
