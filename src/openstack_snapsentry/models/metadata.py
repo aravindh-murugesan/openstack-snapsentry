@@ -10,6 +10,36 @@ from src.openstack_snapsentry.models.frequency import (
 from src.openstack_snapsentry.models.settings import application_settings
 
 
+class SnapshotMetadata(BaseModel):
+    model_config = {
+        "populate_by_name": True,
+    }
+    is_managed: Literal["true", "false"] = Field(
+        description="Indicates if this volume has to be managed by SnapSentry",
+        alias=application_settings.get_alias("snapsentry-managed"),
+    )
+    retention_expiry_time: str = Field(
+        description="Indicates when this snapshot has to be retired in ISO8601 Format. Valid only for retention_type=time.",
+        alias=application_settings.get_alias("snapshot-expiry-date"),
+    )
+    retention_expiry_time_zoned: str = Field(
+        description="Indicates when this snapshot has to be retired in ISO8601 Format. Valid only for retention_type=time.",
+        alias=application_settings.get_alias("snapshot-expiry-date-zoned"),
+    )
+    retention_days: str = Field(
+        description="Indicates how long the snapshot has to be stored.",
+        alias=application_settings.get_alias("snapshot-retention-days"),
+    )
+    retention_type: Literal["count", "time"] = Field(
+        description="Indicates the rentention logic to be applied.",
+        default="time",
+        alias=application_settings.get_alias("snapshot-retention-type"),
+    )
+    frequency_type: Literal["daily", "monthly", "weekly"] = Field(
+        alias=application_settings.get_alias("snapshot-frequency-type"),
+    )
+
+
 class VolumeSubscriptionInfo(BaseModel):
     model_config = {
         "populate_by_name": True,
