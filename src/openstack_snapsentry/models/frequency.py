@@ -28,7 +28,7 @@ class SnapshotSchedule(OpenstackBaseModel):
     )
 
 
-class BaseSnapshotSchedule(BaseModel):
+class BaseSnapshotPolicy(OpenstackBaseModel):
     model_config = {
         "populate_by_name": True,
     }
@@ -37,23 +37,26 @@ class BaseSnapshotSchedule(BaseModel):
         default=False,
         description="Indicates if daily snapshot workflow is expected for the volume",
     )
-
     start_time: time = Field(
         default=time.fromisoformat("23:29"),
-        description="Time for the snapshot to trigger.",
+        description="Time when snapshot should trigger (24-hour format)",
     )
     timezone: str = Field(
         default="UTC",
-        description="Indicates the timezone for the snapshot schedule",
+        description="IANA timezone for schedule interpretation",
+    )
+    retention_days: int = Field(
+        ge=1,
+        le=3650,  # 10 years max
+        description="Number of days to retain snapshots",
     )
 
     @field_validator("timezone")
+    @classmethod
     def validate_timezone(cls, v: str) -> str:
-        """Ensure timezone is valid."""
+        """Ensure timezone is valid IANA timezone."""
         if v not in available_timezones():
-            raise ValueError(
-                f"Invalid timezone '{v}'. Must be one of available IANA zones."
-            )
+            raise ValueError(f"Invalid timezone '{v}'. Must be a valid IANA timezone.")
         return v
 
     def compute_scheduled_times(
@@ -101,7 +104,7 @@ class BaseSnapshotSchedule(BaseModel):
         raise NotImplementedError("Must be implemented in subclass")
 
 
-class DailySnapshotSchedule(BaseSnapshotSchedule):
+class DailySnapshotSchedule(BaseSnapshotPolicy):
     model_config = {
         "populate_by_name": True,
     }
@@ -143,7 +146,7 @@ class DailySnapshotSchedule(BaseSnapshotSchedule):
         return is_time
 
 
-class WeeklySnapshotSchedule(BaseSnapshotSchedule):
+class WeeklySnapshotSchedule(BaseSnapshotPolicy):
     model_config = {
         "populate_by_name": True,
     }
@@ -207,7 +210,7 @@ class WeeklySnapshotSchedule(BaseSnapshotSchedule):
         return is_time
 
 
-class MonthlySnapshotSchedule(BaseSnapshotSchedule):
+class MonthlySnapshotSchedule(BaseSnapshotPolicy):
     model_config = {
         "populate_by_name": True,
     }
