@@ -6,25 +6,26 @@ from pydantic import BaseModel, Field, field_validator
 from whenever import Instant, ZonedDateTime, PlainDateTime, available_timezones
 
 from src.openstack_snapsentry.models.settings import application_settings
+from src.openstack_snapsentry.models.base import OpenstackBaseModel
 
 
-class SnapshotSchedule(BaseModel):
-    model_config = {
-        "populate_by_name": True,
-    }
+class SnapshotSchedule(OpenstackBaseModel):
     is_due: bool = Field(
         description="Indicates if the snapshot windows is active or not"
     )
-    next_time_utc: Optional[ZonedDateTime] = Field(
-        default=None,
+    scheduled_time_utc: ZonedDateTime = Field(
         description="Records the expected snapshot due date/time in UTC. Computing logic are based on this converted value",
     )
-    next_time_zoned: Optional[ZonedDateTime] = Field(
-        default=None,
+    scheduled_time_local: ZonedDateTime = Field(
         description="Records the expected snapshot due date/time in user's preferred timezone for easier reference",
     )
-    current_time_utc: Instant = Field(default=Instant.now())
-    reason: Optional[str] = Field(default=None)
+    current_time_utc: Instant = Field(
+        default_factory=Instant.now,
+        description="Current time when schedule was evaluated",
+    )
+    reason: Optional[str] = Field(
+        default=None, description="Human readable reason for the decision"
+    )
 
 
 class BaseSnapshotSchedule(BaseModel):
@@ -92,8 +93,8 @@ class BaseSnapshotSchedule(BaseModel):
         is_due = now >= scheduled_timeframe_utc
         return SnapshotSchedule(
             is_due=is_due,
-            next_time_zoned=scheduled_timeframe_zoned,
-            next_time_utc=scheduled_timeframe_utc,
+            scheduled_time_local=scheduled_timeframe_zoned,
+            scheduled_time_utc=scheduled_timeframe_utc,
         )
 
     def is_snapshot_due(self) -> SnapshotSchedule:
@@ -133,10 +134,10 @@ class DailySnapshotSchedule(BaseSnapshotSchedule):
     def is_snapshot_due(self) -> SnapshotSchedule:
         is_time = self.timeframe_validation()
         is_time.reason = (
-            f"Snapshot window matched: current time '{is_time.current_time_utc}' overlaps with scheduled window '{is_time.next_time_utc}'. "
+            f"Snapshot window matched: current time '{is_time.current_time_utc}' overlaps with scheduled window '{is_time.scheduled_time_utc}'. "
             "Proceeding with snapshot operation."
             if is_time.is_due
-            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' is outside scheduled window '{is_time.next_time_utc}'. "
+            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' is outside scheduled window '{is_time.scheduled_time_utc}'. "
             "Skipping snapshot operation."
         )
         return is_time
@@ -197,10 +198,10 @@ class WeeklySnapshotSchedule(BaseSnapshotSchedule):
         ## Check 2: Time window matches the snapshot's desired start time.
         is_time = self.timeframe_validation()
         is_time.reason = (
-            f"Snapshot window matched: current time '{is_time.current_time_utc}' and current day '{current_weekday}' overlaps with scheduled window '{is_time.next_time_utc}' every '{self.start_day}'. "
+            f"Snapshot window matched: current time '{is_time.current_time_utc}' and current day '{current_weekday}' overlaps with scheduled window '{is_time.scheduled_time_utc}' every '{self.start_day}'. "
             "Proceeding with snapshot operation."
             if is_time.is_due
-            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' and current day '{current_weekday}' is outside scheduled window '{is_time.next_time_utc}' every '{self.start_day}'. "
+            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' and current day '{current_weekday}' is outside scheduled window '{is_time.scheduled_time_utc}' every '{self.start_day}'. "
             "Skipping snapshot operation."
         )
         return is_time
@@ -256,12 +257,12 @@ class MonthlySnapshotSchedule(BaseSnapshotSchedule):
         try:
             ## User can provide any day of the month. So we try to replace the date from our
             # time based calculations.
-            expected_date = is_time.next_time_utc.replace(day=self.start_date)
+            expected_date = is_time.scheduled_time_utc.replace(day=self.start_date)
         except ValueError:
             ## If the date is invalid, say 31 on months that only has 30, this replaces it
             # with the last valid day of the month.
             last_date = calendar.monthrange(today.year, today.month)[1]
-            expected_date = is_time.next_time_utc.replace(day=last_date)
+            expected_date = is_time.scheduled_time_utc.replace(day=last_date)
 
         ## Check 1: Check current date matches expected date
         is_due = today.day == expected_date.day
@@ -273,10 +274,10 @@ class MonthlySnapshotSchedule(BaseSnapshotSchedule):
 
         ## Check 2: Time window matches the snapshot's desired start time.
         is_time.reason = (
-            f"Snapshot window matched: current time '{is_time.current_time_utc}' and current date '{today.day}' overlaps with scheduled window '{is_time.next_time_utc}' every '{self.start_date}'. "
+            f"Snapshot window matched: current time '{is_time.current_time_utc}' and current date '{today.day}' overlaps with scheduled window '{is_time.scheduled_time_utc}' every '{self.start_date}'. "
             "Proceeding with snapshot operation."
             if is_time.is_due
-            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' and current date '{today.day}' is outside scheduled window '{is_time.next_time_utc}' every '{self.start_date}'. "
+            else f"Snapshot window mismatch: current time '{is_time.current_time_utc}' and current date '{today.day}' is outside scheduled window '{is_time.scheduled_time_utc}' every '{self.start_date}'. "
             "Skipping snapshot operation."
         )
         return is_time
