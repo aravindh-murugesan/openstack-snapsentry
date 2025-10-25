@@ -10,7 +10,7 @@ from src.openstack_snapsentry.models.metadata import (
 )
 
 
-class OpenstackVolumeRepository:
+class VolumeRepository:
     """
     Repository for interacting with OpenStack block storage volumes for listing,
     managing snapshot subscription metadata.
