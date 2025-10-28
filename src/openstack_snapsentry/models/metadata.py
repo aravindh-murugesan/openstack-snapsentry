@@ -1,6 +1,7 @@
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+from whenever import Instant
 
 from src.openstack_snapsentry.models.base import OpenstackBaseModel
 from src.openstack_snapsentry.models.frequency import (
@@ -36,6 +37,14 @@ class SnapshotMetadata(OpenstackBaseModel):
     frequency_type: Literal["daily", "monthly", "weekly"] = Field(
         alias=application_settings.get_alias("snapshot-frequency-type"),
     )
+
+    def is_expired(self):
+        expiry_window = Instant.parse_iso(self.retention_expiry_time)
+        now = Instant.now()
+
+        if now <= expiry_window:
+            return False
+        return True
 
 
 class VolumeSubscriptionInfo(OpenstackBaseModel):
