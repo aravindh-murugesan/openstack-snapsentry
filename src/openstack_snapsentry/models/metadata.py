@@ -2,6 +2,7 @@ from typing import Optional, Literal
 
 from pydantic import BaseModel, Field
 
+from src.openstack_snapsentry.models.base import OpenstackBaseModel
 from src.openstack_snapsentry.models.frequency import (
     DailySnapshotSchedule,
     MonthlySnapshotSchedule,
@@ -10,10 +11,7 @@ from src.openstack_snapsentry.models.frequency import (
 from src.openstack_snapsentry.models.settings import application_settings
 
 
-class SnapshotMetadata(BaseModel):
-    model_config = {
-        "populate_by_name": True,
-    }
+class SnapshotMetadata(OpenstackBaseModel):
     is_managed: Literal["true", "false"] = Field(
         description="Indicates if this volume has to be managed by SnapSentry",
         alias=application_settings.get_alias("snapsentry-managed"),
@@ -40,10 +38,7 @@ class SnapshotMetadata(BaseModel):
     )
 
 
-class VolumeSubscriptionInfo(BaseModel):
-    model_config = {
-        "populate_by_name": True,
-    }
+class VolumeSubscriptionInfo(OpenstackBaseModel):
     is_enabled: bool = Field(
         default=False,
         description="Indicates if this volume has to be managed by SnapSentry",
@@ -111,11 +106,7 @@ class VolumeSubscriptionInfo(BaseModel):
         return self.dump_flat_str_dict()
 
 
-class OpenstackVolume(BaseModel):
-    model_config = {
-        "populate_by_name": True,
-    }
-
+class OpenstackVolume(OpenstackBaseModel):
     id: str = Field(description="Unique id of the volume in openstack")
     name: Optional[str] = Field(default=None, description="Name of the volume")
     status: str = Field(description="Status of the openstack volume")
