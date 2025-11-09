@@ -334,7 +334,6 @@ class SnapshotManager:
             snapshot = self._create_snapshot(
                 volume_id=volume_id, name=name, frequency=frequency, force=True
             )
-            print(snapshot)
         except Exception as e:
             raise SnapshotCreationError(
                 f"Failed to create snapshot for volume {volume_id}: {e}"
