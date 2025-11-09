@@ -330,9 +330,16 @@ class SnapshotManager:
         )
 
         ## Create the snapshot
-        snapshot = self._create_snapshot(
-            volume_id=volume_id, name=name, frequency=frequency, force=True
-        )
+        try:
+            snapshot = self._create_snapshot(
+                volume_id=volume_id, name=name, frequency=frequency, force=True
+            )
+            print(snapshot)
+        except Exception as e:
+            raise SnapshotCreationError(
+                f"Failed to create snapshot for volume {volume_id}: {e}"
+            ) from e
+
         try:
             self._inject_metadata(
                 volume_id=volume_id, snapshot_id=snapshot.id, metadata=metadata
