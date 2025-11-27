@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, EmailStr, field_validator
-from typing import Literal, List
 import os
 import re
+from typing import List, Literal
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class EmailAlert(BaseModel):
