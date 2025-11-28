@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snapshot Status Notification</title>
+    <!--[if mso]>
+    <style type="text/css">
+        body, table, td {font-family: Arial, sans-serif !important;}
+    </style>
+    <![endif]-->
+</head>
+
+<body
+    style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background-color: #f5f5f5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600"
+                    style="margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+
+                    {% if status == 'success' %}
+                    <!-- SUCCESS VERSION -->
+                    <tr>
+                        <td
+                            style="padding: 48px 40px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <svg width="80" height="80" viewBox="0 0 80 80" style="display: block; margin: 0 auto;">
+                                <circle cx="40" cy="40" r="38" fill="none" stroke="#ffffff" stroke-width="3"
+                                    opacity="0.3" />
+                                <circle cx="40" cy="40" r="32" fill="#ffffff" opacity="0.15" />
+                                <path d="M25 40 L35 50 L55 30" fill="none" stroke="#ffffff" stroke-width="4"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <h1
+                                style="margin: 24px 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 600; line-height: 1.3;">
+                                Snapshot Created Successfully</h1>
+                            <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">Your volume snapshot
+                                has been completed</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 40px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #f9fafb; border-left: 3px solid #10b981; margin-bottom: 12px;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Snapshot ID</p>
+                                        <p
+                                            style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: 'Courier New', monospace;">
+                                            {{ snapshot_id }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #f9fafb; border-left: 3px solid #10b981;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Volume ID</p>
+                                        <p
+                                            style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: 'Courier New', monospace;">
+                                            {{ volume_id }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #f9fafb; border-left: 3px solid #10b981;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Project Name</p>
+                                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">{{
+                                            project_name }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #f9fafb; border-left: 3px solid #10b981;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Snapshot Frequency</p>
+                                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">{{
+                                            snapshot_frequency }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #f9fafb; border-left: 3px solid #10b981;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Time of Operation</p>
+                                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">{{
+                                            operation_time }}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    {% else %}
+                    <!-- FAILURE VERSION -->
+                    <tr>
+                        <td
+                            style="padding: 48px 40px; text-align: center; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <svg width="80" height="80" viewBox="0 0 80 80" style="display: block; margin: 0 auto;">
+                                <circle cx="40" cy="40" r="38" fill="none" stroke="#ffffff" stroke-width="3"
+                                    opacity="0.3" />
+                                <circle cx="40" cy="40" r="32" fill="#ffffff" opacity="0.15" />
+                                <path d="M30 30 L50 50 M50 30 L30 50" stroke="#ffffff" stroke-width="4"
+                                    stroke-linecap="round" />
+                            </svg>
+                            <h1
+                                style="margin: 24px 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 600; line-height: 1.3;">
+                                Snapshot Creation Failed</h1>
+                            <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">We encountered an issue
+                                creating your volume snapshot</p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 40px;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #fef2f2; border-left: 3px solid #ef4444;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #991b1b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Volume ID</p>
+                                        <p
+                                            style="margin: 0; color: #111827; font-size: 16px; font-weight: 500; font-family: 'Courier New', monospace;">
+                                            {{ volume_id }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #fef2f2; border-left: 3px solid #ef4444;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #991b1b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Project Name</p>
+                                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">{{
+                                            project_name }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #fef2f2; border-left: 3px solid #ef4444;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #991b1b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Snapshot Frequency</p>
+                                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">{{
+                                            snapshot_frequency }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #fef2f2; border-left: 3px solid #ef4444;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #991b1b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Reason for Failure</p>
+                                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">{{
+                                            failure_reason }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="height: 12px;"></td>
+                                </tr>
+                                <tr>
+                                    <td
+                                        style="padding: 16px; background-color: #fef2f2; border-left: 3px solid #ef4444;">
+                                        <p
+                                            style="margin: 0 0 4px 0; color: #991b1b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            Time of Operation</p>
+                                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">{{
+                                            operation_time }}</p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            {% if potential_fixes %}
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                                style="margin-top: 32px;">
+                                <tr>
+                                    <td
+                                        style="padding: 24px; background-color: #fffbeb; border-radius: 6px; border: 1px solid #fde68a;">
+                                        <h2
+                                            style="margin: 0 0 16px 0; color: #92400e; font-size: 16px; font-weight: 600;">
+                                            Potential Fixes</h2>
+                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0"
+                                            width="100%">
+                                            {% for fix in potential_fixes %}
+                                            <tr>
+                                                <td
+                                                    style="padding: 0 0 {% if not loop.last %}12{% else %}0{% endif %}px 0; vertical-align: top; width: 24px;">
+                                                    <svg width="20" height="20" viewBox="0 0 20 20"
+                                                        style="display: block;">
+                                                        <circle cx="10" cy="10" r="8" fill="#d97706" />
+                                                        <text x="10" y="14" font-size="12" fill="#ffffff"
+                                                            text-anchor="middle" font-weight="bold">{{ loop.index
+                                                            }}</text>
+                                                    </svg>
+                                                </td>
+                                                <td
+                                                    style="padding: 0 0 {% if not loop.last %}12{% else %}0{% endif %}px 12px; color: #78350f; font-size: 14px; line-height: 1.6;">
+                                                    {{ fix }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td style="padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p
+                                style="margin: 0 0 12px 0; color: #111827; font-size: 13px; font-weight: 500; letter-spacing: 0.3px;">
+                                Snapshot automated by <span style="color: #3b82f6;">SnapSentry</span></p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.6;">This is an
+                                automated notification from your snapshot management system.<br>Please do not reply to
+                                this email.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>
