@@ -6,6 +6,10 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class EmailAlert(BaseModel):
+    server: str = Field(
+        default=os.environ.get("SNAPSENTRY_SMTP_HOST", ""), alias="host"
+    )
+    port: int = Field(default=25, alias="port")
     to: List[EmailStr] = Field(
         default_factory=lambda: [
             email.strip()

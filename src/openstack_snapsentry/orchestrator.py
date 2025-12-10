@@ -1,4 +1,5 @@
 from typing import List
+import whenever
 
 import structlog
 from openstack.block_storage.v3.snapshot import Snapshot
@@ -6,9 +7,11 @@ from openstack.block_storage.v3.snapshot import Snapshot
 from src.openstack_snapsentry.connection import OpenstackConnectionManager
 from src.openstack_snapsentry.models.metadata import (
     OpenstackVolume,
-    VolumeSubscriptionInfo,
     SnapshotMetadata,
+    VolumeSubscriptionInfo,
 )
+from src.openstack_snapsentry.models.settings import application_settings
+from src.openstack_snapsentry.notifications import EmailNotification, EmailTemplater
 from src.openstack_snapsentry.snapshot import (
     SnapshotCreationError,
     SnapshotFrequency,
@@ -171,6 +174,28 @@ class SnapSentryOrchestrator:
                     frequency=frequency,
                     reason=str(e),
                 )
+                if (
+                    application_settings.alerts.enabled is True
+                    and application_settings.alerts.type == "email"
+                ):
+                    templater = EmailTemplater()
+                    message = templater.render_single_alert(
+                        status="failure",
+                        volume_id=volume.id,
+                        project_name=f"{self.volume_repo.connection.current_project['name']} ({self.volume_repo.connection.current_project_id})"
+                        if self.volume_repo.connection
+                        else "",
+                        snapshot_frequency=frequency,
+                        operation_time=whenever.Instant.now().format_iso(),
+                        failure_reason=str(e),
+                    )
+                    alert = EmailNotification(
+                        subject=f"SnapSentry - Snapshot Failure - {volume.id}",
+                        message=message,
+                        is_html=True,
+                    )
+                    alert.send()
+
         self.logger.info(
             "Volume snapshot processing completed",
             volume_id=volume.id,
@@ -201,6 +226,7 @@ class SnapSentryOrchestrator:
                         "Failed to process volume",
                         volume_id=volume.id,
                         reason=str(e),
+                        alert_enabled=application_settings.alerts.enabled,
                     )
 
             self.logger.info("Snapshot workflow completed")
